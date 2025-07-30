@@ -10,5 +10,9 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
 
+# 👇 JWT 설정 추가
+jwt:
+  secret: mySecretKeyForJWTTokenGeneration
+  expiration: 86400  # 24시간 (초 단위)
