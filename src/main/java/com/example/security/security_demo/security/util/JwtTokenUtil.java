@@ -1,4 +1,4 @@
-package com.example.security.security_demo.util;// src/main/java/com/example/security/security_demo/config/JwtTokenUtil.java
+package com.example.security.security_demo.security.util;// src/main/java/com/example/security/security_demo/config/JwtTokenUtil.java
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;

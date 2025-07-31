@@ -2,7 +2,7 @@ package com.example.security.security_demo.user.service;
 
 import com.example.security.security_demo.user.domain.User;
 import com.example.security.security_demo.user.repository.UserRepository;
-import com.example.security.security_demo.util.JwtTokenUtil;
+import com.example.security.security_demo.security.util.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
