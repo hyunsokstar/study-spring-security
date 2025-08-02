@@ -50,20 +50,15 @@ public class AuthController {
             );
 
             if (result.isSuccess()) {
-                // 👇 토큰 포함해서 로그인 응답 생성
                 LoginResponse loginResponse = LoginResponse.success(
                         result.getUser().getUsername(),
-                        result.getToken() // 👈 토큰 추가!
+                        result.getToken()
                 );
 
                 return ResponseEntity.ok(
-                        ApiResponse.success(
-                                "로그인 성공",
-                                loginResponse
-                        )
+                        ApiResponse.success("로그인 성공", loginResponse)
                 );
             } else {
-                // 로그인 실패
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("❌ " + result.getMessage()));
             }
@@ -76,24 +71,34 @@ public class AuthController {
     }
 
     /**
-     * 현재 사용자 정보
+     * 현재 사용자 정보 - 간소화됨 ✅
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse> me(@RequestParam String username) {
-        try {
-            return loginService.findByUsername(username)
-                    .map(user -> ResponseEntity.ok(
-                            ApiResponse.success(
-                                    "사용자 정보 조회 성공",
-                                    "안녕! " + user.getUsername() + " 님 🐰"
-                            )
-                    ))
-                    .orElse(ResponseEntity.badRequest()
-                            .body(ApiResponse.error("사용자를 찾을 수 없습니다.")));
-        } catch (Exception e) {
-            log.error("사용자 정보 조회 중 오류 발생", e);
+    public ResponseEntity<ApiResponse> me(@RequestHeader("Authorization") String authHeader) {
+        LoginService.AuthResult result = loginService.getCurrentUser(authHeader);
+
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(
+                    ApiResponse.success("사용자 정보 조회 성공", result.getData())
+            );
+        } else {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("사용자 정보 조회 중 오류가 발생했습니다."));
+                    .body(ApiResponse.error("❌ " + result.getMessage()));
+        }
+    }
+
+    /**
+     * 토큰 유효성 검증 - 간소화됨 ✅
+     */
+    @PostMapping("/validate")
+    public ResponseEntity<ApiResponse> validateToken(@RequestHeader("Authorization") String authHeader) {
+        LoginService.AuthResult result = loginService.validateTokenFromHeader(authHeader);
+
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(ApiResponse.success("✅ " + result.getMessage()));
+        } else {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("❌ " + result.getMessage()));
         }
     }
 }
