@@ -3,6 +3,7 @@ package com.example.security.security_demo.ai.service;
 import com.example.security.security_demo.ai.dto.ChatResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 @Service
 public class ChatGptService {
@@ -15,6 +16,7 @@ public class ChatGptService {
                 .build();
     }
 
+    // 💬 일반 채팅 (전체 응답 한 번에)
     public ChatResponse chat(String message) {
         String response = this.chatClient.prompt()
                 .user(message)
@@ -24,7 +26,15 @@ public class ChatGptService {
         return new ChatResponse(response);
     }
 
-    // 구조화된 응답 예제
+    // 🔥 스트리밍 채팅 (실시간 타이핑 효과)
+    public Flux<String> streamChat(String message) {
+        return this.chatClient.prompt()
+                .user(message)
+                .stream()
+                .content();
+    }
+
+    // 🎬 구조화된 응답 예제 (영화 정보)
     public record MovieInfo(String actor, java.util.List<String> movies) {}
 
     public MovieInfo getMovieRecommendation(String actor) {
@@ -34,7 +44,7 @@ public class ChatGptService {
                 .entity(MovieInfo.class);
     }
 
-    // 추가 메서드: 번역 기능
+    // 🌍 번역 기능
     public ChatResponse translate(String text, String targetLanguage) {
         String response = this.chatClient.prompt()
                 .user("다음 텍스트를 " + targetLanguage + "로 번역해주세요: " + text)
@@ -44,10 +54,30 @@ public class ChatGptService {
         return new ChatResponse(response);
     }
 
-    // 추가 메서드: 코드 리뷰
+    // 👨‍💻 코드 리뷰 기능
     public ChatResponse reviewCode(String code) {
         String response = this.chatClient.prompt()
                 .user("다음 코드를 리뷰하고 개선점을 알려주세요:\n\n" + code)
+                .call()
+                .content();
+
+        return new ChatResponse(response);
+    }
+
+    // 📝 요약 기능
+    public ChatResponse summarize(String text) {
+        String response = this.chatClient.prompt()
+                .user("다음 텍스트를 한국어로 요약해주세요:\n\n" + text)
+                .call()
+                .content();
+
+        return new ChatResponse(response);
+    }
+
+    // 🎨 창작 도우미
+    public ChatResponse generateCreativeContent(String topic, String contentType) {
+        String response = this.chatClient.prompt()
+                .user("'" + topic + "'을 주제로 " + contentType + "을/를 창작해주세요. 한국어로 작성해주세요.")
                 .call()
                 .content();
 

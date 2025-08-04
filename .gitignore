@@ -36,3 +36,4 @@ out/
 ### VS Code ###
 .vscode/
 src/main/java/com/example/security/security_demo/.env
+.env

@@ -25,6 +25,26 @@ spring:
           max-tokens: 4000
           temperature: 0.7
 
+    # 🔥 한글 인코딩 설정 추가
+    http:
+      encoding:
+        charset: UTF-8
+        enabled: true
+        force: true
+    servlet:
+      encoding:
+        charset: UTF-8
+        enabled: true
+        force: true
+
+# 🔥 서버 인코딩 설정
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
 # JWT 설정
 jwt:
   secret: mySecretKeyForJWTTokenGeneration
