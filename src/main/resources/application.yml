@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: "optional:file:.env[.properties]"
   datasource:
     url: jdbc:postgresql://localhost:5432/security_db
     username: postgres
@@ -11,8 +13,19 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: update
+  # 👇 OpenAI 설정
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4-1106-preview  # 👈 GPT-4 Turbo (추천)
+          # model: gpt-3.5-turbo     # 👈 저렴한 옵션
+          # model: gpt-4             # 👈 기본 GPT-4
+          max-tokens: 4000
+          temperature: 0.7
 
-# 👇 JWT 설정 추가
+# JWT 설정
 jwt:
   secret: mySecretKeyForJWTTokenGeneration
-  expiration: 86400  # 24시간 (초 단위)
+  expiration: 86400

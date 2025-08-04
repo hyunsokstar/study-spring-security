@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -26,12 +27,14 @@ public class SecurityConfig {
     // 🔧 JWT 관련 컴포넌트 주입
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-
-    // ❌ PasswordEncoder는 PasswordEncoderConfig로 이동 (순환 의존성 해결)
+    private final CorsConfigurationSource corsConfigurationSource;  // 🌐 CORS 설정 주입
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // 🌐 CORS 설정 활성화 (CorsConfig에서 정의한 설정 사용)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
                 // 🔐 URL별 접근 권한 설정
                 .authorizeHttpRequests(authorize -> authorize
 
@@ -39,6 +42,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/signup").permitAll()    // 회원가입
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()     // 로그인
                         .requestMatchers(HttpMethod.GET, "/api/users/count").permitAll() // 사용자 수 조회 (공개)
+
+                        // 🤖 AI 테스트 엔드포인트 (인증 없이 접근 가능)
+                        .requestMatchers(HttpMethod.GET, "/api/ai/hello").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/ai/test").permitAll()
+                        .requestMatchers("/api/ai/**").permitAll()  // 👈 모든 HTTP 메서드 허용
+
                         .requestMatchers("/error").permitAll()                          // 에러 페이지
                         .requestMatchers("/favicon.ico").permitAll()                    // 파비콘
 
@@ -72,9 +81,15 @@ public class SecurityConfig {
 }
 
 /*
-🔄 JWT 인증 플로우:
+🔄 JWT + CORS 인증 플로우:
 
-📥 클라이언트 요청
+📥 클라이언트 요청 (Tauri 앱에서)
+    ↓
+🌐 CORS 필터 (Spring Security 내장)
+    ├─ Origin 헤더 확인
+    ├─ 허용된 도메인인지 검증
+    ├─ Preflight 요청 처리 (OPTIONS)
+    └─ CORS 헤더 추가
     ↓
 🔍 JwtAuthenticationFilter (우리가 추가한 필터)
     ├─ Authorization 헤더에서 토큰 추출
@@ -88,9 +103,9 @@ public class SecurityConfig {
     ├─ 인증됨 → Controller 호출 허용
     └─ 미인증 → AuthenticationEntryPoint 호출
     ↓
-📤 응답
-    ├─ 성공: Controller 응답
-    └─ 실패: 401 JSON 에러 응답
+📤 응답 (CORS 헤더 포함)
+    ├─ 성공: Controller 응답 + CORS 헤더
+    └─ 실패: 401 JSON 에러 응답 + CORS 헤더
 
-🎯 이제 토큰 기반 인증이 모든 보호된 엔드포인트에 자동 적용!
+🎯 이제 Tauri 앱에서 백엔드 API 호출이 CORS 에러 없이 가능!
 */
