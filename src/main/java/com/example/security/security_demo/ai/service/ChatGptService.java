@@ -42,8 +42,11 @@ public class ChatGptService {
         return this.chatClient.prompt()
                 .user(message)
                 .stream()
-                .content();
-        // bufferTimeout 제거 - Controller에서 처리
+                .content()
+                // 100ms 마다, 또는 최대 10개 토큰이 모일 때마다 한 번에 던져준다
+                .bufferTimeout(10, Duration.ofMillis(100))
+                // 리스트를 문자열로 합쳐서 내려준다
+                .map(tokens -> String.join("", tokens));
     }
 
     // 🎬 구조화된 응답 예제 (영화 정보)
