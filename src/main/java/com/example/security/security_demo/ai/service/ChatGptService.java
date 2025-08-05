@@ -5,6 +5,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
+
 @Service
 public class ChatGptService {
 
@@ -12,7 +14,16 @@ public class ChatGptService {
 
     public ChatGptService(ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder
-                .defaultSystem("당신은 한국어로 친절하게 답변하는 AI 어시스턴트입니다. 정확하고 도움이 되는 정보를 제공해주세요.")
+                .defaultSystem("""
+                당신은 한국어로 친절하게 답변하는 AI 어시스턴트입니다. 
+                정확하고 도움이 되는 정보를 제공해주세요.
+                
+                답변 시 다음 형식을 따라주세요:
+                - 문단과 문단 사이는 빈 줄로 구분
+                - 긴 설명은 여러 문단으로 나누어 가독성 향상
+                - 목록이 필요한 경우 번호나 불릿 포인트 사용
+                - 코드는 백틱(```)으로 감싸서 표시
+                """)
                 .build();
     }
 
@@ -32,6 +43,7 @@ public class ChatGptService {
                 .user(message)
                 .stream()
                 .content();
+        // bufferTimeout 제거 - Controller에서 처리
     }
 
     // 🎬 구조화된 응답 예제 (영화 정보)

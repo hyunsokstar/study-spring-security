@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping("/api/ai")
 @RequiredArgsConstructor
@@ -48,8 +50,8 @@ public class ChatGptController {
     // 🔥 스트리밍 채팅 (POST 방식) - 실제 사용
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChatPost(@RequestBody ChatRequest request) {
-        return chatGptService.streamChat(request.getMessage())
-                .map(chunk -> "data: " + chunk + "\n\n"); // SSE 형식
+        return chatGptService.streamChat(request.getMessage());
+        // Spring WebFlux가 자동으로 SSE 형식으로 변환
     }
 
     // 🎬 영화 추천 테스트 (구조화된 응답)
