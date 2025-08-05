@@ -4,13 +4,23 @@ import com.example.security.security_demo.ai.dto.ChatResponse;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscription;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
+@Slf4j
 @Service
 public class ChatGptService {
 
     private final ChatClient chatClient;
+
+    // 🔥 활성 스트림을 관리하기 위한 Map 추가 (Subscription 사용)
+    private final Map<String, AtomicReference<Subscription>> activeStreams = new ConcurrentHashMap<>();
 
     public ChatGptService(ChatClient.Builder chatClientBuilder) {
         this.chatClient = chatClientBuilder
@@ -37,16 +47,80 @@ public class ChatGptService {
         return new ChatResponse(response);
     }
 
-    // 🔥 스트리밍 채팅 (실시간 타이핑 효과)
+    // 🔥 스트리밍 채팅 (실시간 타이핑 효과) - 기존 메서드 유지
     public Flux<String> streamChat(String message) {
         return this.chatClient.prompt()
                 .user(message)
                 .stream()
                 .content()
-                // 100ms 마다, 또는 최대 10개 토큰이 모일 때마다 한 번에 던져준다
                 .bufferTimeout(10, Duration.ofMillis(100))
-                // 리스트를 문자열로 합쳐서 내려준다
                 .map(tokens -> String.join("", tokens));
+    }
+
+    // 🔥 취소 가능한 스트리밍 채팅 (새로 추가)
+    public Flux<String> streamChatWithId(String message, String streamId) {
+        AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
+        activeStreams.put(streamId, subscriptionRef);
+
+        return this.chatClient.prompt()
+                .user(message)
+                .stream()
+                .content()
+                .bufferTimeout(10, Duration.ofMillis(100))
+                .map(tokens -> String.join("", tokens))
+                .doOnSubscribe(subscription -> {
+                    // 스트림 시작 시 구독 저장
+                    subscriptionRef.set(subscription);
+                    log.info("Stream started with ID: {}", streamId);
+                })
+                .doOnTerminate(() -> {
+                    // 스트림 종료 시 제거
+                    activeStreams.remove(streamId);
+                    log.info("Stream terminated: {}", streamId);
+                })
+                .doOnCancel(() -> {
+                    // 취소 시 제거
+                    activeStreams.remove(streamId);
+                    log.info("Stream cancelled: {}", streamId);
+                })
+                .doOnError(error -> {
+                    // 에러 발생 시 제거
+                    activeStreams.remove(streamId);
+                    log.error("Stream error: {}", streamId, error);
+                });
+    }
+
+    // 🛑 스트리밍 취소 메서드 (새로 추가)
+    public boolean cancelStream(String streamId) {
+        AtomicReference<Subscription> subscriptionRef = activeStreams.get(streamId);
+        if (subscriptionRef != null) {
+            Subscription subscription = subscriptionRef.get();
+            if (subscription != null) {
+                subscription.cancel();
+                activeStreams.remove(streamId);
+                log.info("Stream cancelled by user: {}", streamId);
+                return true;
+            }
+        }
+        log.warn("Stream not found or already cancelled: {}", streamId);
+        return false;
+    }
+
+    // 📊 활성 스트림 목록 조회 (디버깅용)
+    public Set<String> getActiveStreams() {
+        return activeStreams.keySet();
+    }
+
+    // 🧹 모든 스트림 정리 (애플리케이션 종료 시)
+    public void cancelAllStreams() {
+        activeStreams.forEach((id, subscriptionRef) -> {
+            Subscription subscription = subscriptionRef.get();
+            if (subscription != null) {
+                subscription.cancel();
+            }
+        });
+        activeStreams.clear();
+        log.info("All streams cancelled");
     }
 
     // 🎬 구조화된 응답 예제 (영화 정보)

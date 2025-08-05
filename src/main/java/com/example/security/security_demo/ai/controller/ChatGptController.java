@@ -9,7 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -47,11 +49,46 @@ public class ChatGptController {
                 .map(chunk -> "data: " + chunk + "\n\n"); // SSE 형식
     }
 
-    // 🔥 스트리밍 채팅 (POST 방식) - 실제 사용
+    // 🔥 스트리밍 채팅 (POST 방식) - 실제 사용 (기존 방식)
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChatPost(@RequestBody ChatRequest request) {
         return chatGptService.streamChat(request.getMessage());
         // Spring WebFlux가 자동으로 SSE 형식으로 변환
+    }
+
+    // 🔥 취소 가능한 스트리밍 채팅 (새로 추가)
+    @PostMapping(value = "/stream/{streamId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamChatWithId(
+            @PathVariable String streamId,
+            @RequestBody ChatRequest request) {
+        return chatGptService.streamChatWithId(request.getMessage(), streamId);
+    }
+
+    // 🛑 스트리밍 취소 (새로 추가)
+    @DeleteMapping("/stream/{streamId}")
+    public ResponseEntity<Map<String, Object>> cancelStream(@PathVariable String streamId) {
+        boolean cancelled = chatGptService.cancelStream(streamId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("streamId", streamId);
+        response.put("cancelled", cancelled);
+        response.put("message", cancelled ? "Stream cancelled successfully" : "Stream not found or already completed");
+        response.put("timestamp", System.currentTimeMillis());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 📊 활성 스트림 목록 조회 (디버깅용) (새로 추가)
+    @GetMapping("/streams/active")
+    public ResponseEntity<Map<String, Object>> getActiveStreams() {
+        Set<String> activeStreams = chatGptService.getActiveStreams();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("activeStreams", activeStreams);
+        response.put("count", activeStreams.size());
+        response.put("timestamp", System.currentTimeMillis());
+
+        return ResponseEntity.ok(response);
     }
 
     // 🎬 영화 추천 테스트 (구조화된 응답)
