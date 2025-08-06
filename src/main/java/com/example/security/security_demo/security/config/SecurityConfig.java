@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -28,6 +30,16 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CorsConfigurationSource corsConfigurationSource;  // 🌐 CORS 설정 주입
+
+    // 🚫 기본 UserDetailsService 비활성화 (기본 패스워드 생성 방지)
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return username -> {
+            throw new UsernameNotFoundException("JWT 기반 인증만 사용합니다.");
+        };
+    }
+
+    // 🔐 PasswordEncoder는 PasswordEncoderConfig에서 정의됨 (중복 제거)
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -79,33 +91,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-
-/*
-🔄 JWT + CORS 인증 플로우:
-
-📥 클라이언트 요청 (Tauri 앱에서)
-    ↓
-🌐 CORS 필터 (Spring Security 내장)
-    ├─ Origin 헤더 확인
-    ├─ 허용된 도메인인지 검증
-    ├─ Preflight 요청 처리 (OPTIONS)
-    └─ CORS 헤더 추가
-    ↓
-🔍 JwtAuthenticationFilter (우리가 추가한 필터)
-    ├─ Authorization 헤더에서 토큰 추출
-    ├─ 토큰 유효성 검증 (JwtTokenUtil)
-    ├─ 유효하면 SecurityContext에 인증 정보 설정
-    └─ 유효하지 않으면 SecurityContext 비워둠
-    ↓
-🛡️ AuthorizationFilter (Spring Security 기본)
-    ├─ SecurityContext 확인
-    ├─ 인증 필요한 경로면 인증 상태 체크
-    ├─ 인증됨 → Controller 호출 허용
-    └─ 미인증 → AuthenticationEntryPoint 호출
-    ↓
-📤 응답 (CORS 헤더 포함)
-    ├─ 성공: Controller 응답 + CORS 헤더
-    └─ 실패: 401 JSON 에러 응답 + CORS 헤더
-
-🎯 이제 Tauri 앱에서 백엔드 API 호출이 CORS 에러 없이 가능!
-*/

@@ -1,18 +1,22 @@
 spring:
   config:
     import: "optional:file:.env[.properties]"
+
+  # 🔥 환경변수 사용으로 수정
   datasource:
-    url: jdbc:postgresql://localhost:5432/security_db
-    username: postgres
-    password: postgres123
-    logging:
-      level:
-        org.springframework.security: DEBUG
-        org.springframework.web: DEBUG
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/security_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres123}
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
   # 👇 OpenAI 설정
   ai:
     openai:
@@ -25,17 +29,17 @@ spring:
           max-tokens: 4000
           temperature: 0.7
 
-    # 🔥 한글 인코딩 설정 추가
-    http:
-      encoding:
-        charset: UTF-8
-        enabled: true
-        force: true
-    servlet:
-      encoding:
-        charset: UTF-8
-        enabled: true
-        force: true
+  # 🔥 한글 인코딩 설정 (올바른 위치로 이동)
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 # 🔥 서버 인코딩 설정
 server:
@@ -45,7 +49,14 @@ server:
       enabled: true
       force: true
 
-# JWT 설정
+# 🔥 JWT 설정
 jwt:
-  secret: mySecretKeyForJWTTokenGeneration
-  expiration: 86400
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGeneration}
+  expiration: ${JWT_EXPIRATION:86400000}  # 밀리초 단위 (24시간)
+
+# 🔥 로깅 레벨 (올바른 위치로 이동)
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    com.example.security: DEBUG
