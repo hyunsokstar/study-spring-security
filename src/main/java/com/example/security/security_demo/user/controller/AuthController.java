@@ -6,6 +6,8 @@ import com.example.security.security_demo.user.dto.response.ApiResponse;
 import com.example.security.security_demo.user.dto.response.LoginResponse;
 import com.example.security.security_demo.user.service.LoginService;
 import com.example.security.security_demo.user.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth", description = "회원가입 · 로그인 · 토큰 검증 API")
 public class AuthController {
 
     private final UserService userService;
@@ -23,6 +26,7 @@ public class AuthController {
     /**
      * 회원가입
      */
+    @Operation(summary = "회원가입", description = "username, password 로 신규 사용자 등록")
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse> signup(@RequestBody SignupRequest request) {
         try {
@@ -41,6 +45,7 @@ public class AuthController {
     /**
      * 로그인
      */
+    @Operation(summary = "로그인", description = "username/password 검증 후 JWT 반환")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest request) {
         try {
@@ -71,8 +76,9 @@ public class AuthController {
     }
 
     /**
-     * 현재 사용자 정보 - 간소화됨 ✅
+     * 현재 사용자 정보 조회
      */
+    @Operation(summary = "내 정보 조회", description = "헤더의 JWT 토큰으로 현재 사용자 정보 반환")
     @GetMapping("/me")
     public ResponseEntity<ApiResponse> me(@RequestHeader("Authorization") String authHeader) {
         LoginService.AuthResult result = loginService.getCurrentUser(authHeader);
@@ -88,8 +94,9 @@ public class AuthController {
     }
 
     /**
-     * 토큰 유효성 검증 - 간소화됨 ✅
+     * 토큰 유효성 검증
      */
+    @Operation(summary = "토큰 유효성 검증", description = "헤더의 JWT 토큰이 유효한지 확인")
     @PostMapping("/validate")
     public ResponseEntity<ApiResponse> validateToken(@RequestHeader("Authorization") String authHeader) {
         LoginService.AuthResult result = loginService.validateTokenFromHeader(authHeader);
