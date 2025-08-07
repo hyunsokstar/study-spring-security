@@ -1,102 +1,151 @@
 # Security Demo 서버 관리 가이드
 
-이 문서는 `C:\study-spring-boot\security-demo\readme.md` 파일에 작성되는 서버 관리 매뉴얼입니다.
+이 문서는 `C:\study-spring-boot\security-demo\readme.md` 파일에 작성되는 서버 관리 및 개발 가이드입니다.
 
 ---
 
-## 1️⃣ 서버 중지
+## 프로젝트 개요
 
-1. 실행 중인 Java 프로세스 확인
+* **기술 스펙**: Spring Boot 3.4.1, Spring Security, Spring AI (OpenAI), JWT 기반 인증
+* **목표**: Spring Security + Spring AI를 활용한 RAG 기반 챗봇 자동 응답 기능 구현
 
-   ```bash
-   ps aux | grep java
+---
+
+## 1️⃣ 주요 엔드포인트
+
+* Swagger UI: 🔗 `http://43.200.234.52:8080/swagger-ui/index.html`
+* OpenAPI JSON: `http://43.200.234.52:8080/v3/api-docs`
+
+---
+
+## 2️⃣ 빌드·Jar 파일 설정
+
+1. `build.gradle`에서 프로젝트 버전 및 Jar 파일 이름 지정
+
+   ```groovy
+   version = '0.0.1-SNAPSHOT'        // build/libs/security-demo-0.0.1-SNAPSHOT.jar 생성
+
+   tasks.named('bootJar') {
+       archiveBaseName.set('security-demo')   // (선택) base name 커스터마이징
+       archiveVersion.set(version)
+   }
    ```
-2. 원하는 PID(예: `27554`)로 종료
+2. `.env` 또는 `application.yml` 환경변수 설정
 
-   ```bash
-   kill 27554
-   ```
-3. 그래도 안 죽으면 강제 종료
+   ```yaml
+   spring:
+     config:
+       import: "optional:file:.env"
 
-   ```bash
-   kill -9 27554
+     datasource:
+       jdbc-url: ${DB_URL:jdbc:postgresql://localhost:5432/security_db}
+       username: ${DB_USERNAME:postgres}
+       password: ${DB_PASSWORD:postgres123}
+
+     jpa:
+       properties:
+         hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+
+     ai:
+       openai:
+         api-key: ${OPENAI_API_KEY}
+         chat:
+           options:
+             model: gpt-4-1106-preview
    ```
 
 ---
 
-## 2️⃣ 빌드
+## 3️⃣ 서버 관리 절차
 
-프로젝트 최상위 디렉토리에서 실행:
+### A) 서버 중지
+
+```bash
+# 1) Java 프로세스 조회
+ps aux | grep java
+
+# 2) 원하는 PID로 종료
+kill <PID>
+# (강제) kill -9 <PID>
+```
+
+### B) 빌드
 
 ```bash
 ./gradlew clean bootJar
+# → build/libs/security-demo-0.0.1-SNAPSHOT.jar 생성
 ```
 
-* 결과물: `build/libs/security-demo-0.0.1-SNAPSHOT.jar`
-
----
-
-## 3️⃣ 서버 시작
-
-백그라운드 실행 (로그는 `app.log`에 남김):
+### C) 서버 시작
 
 ```bash
 nohup java -jar build/libs/security-demo-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
 ```
 
-* 실행 후 마지막 줄에 뜨는 PID를 확인하세요.
+* 마지막 줄에 뜨는 PID 확인
+
+### D) 상태 확인
+
+```bash
+# 프로세스 확인
+ps aux | grep security-demo
+
+# 로그 실시간 모니터링
+tail -f app.log
+```
+
+### E) 재시작
+
+```bash
+# 서버 중지 (A 참고)
+ps aux | grep security-demo
+kill <PID>
+
+# 서버 시작 (C 참고)
+nohup java -jar build/libs/security-demo-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
+```
 
 ---
 
-## 4️⃣ 상태 확인
+## 4️⃣ 기타 팁
 
-1. 프로세스 확인
-
-   ```bash
-   ps aux | grep security-demo
-   ```
-2. 로그 실시간 보기
-
-   ```bash
-   tail -f app.log
-   ```
-
----
-
-## 5️⃣ 재시작
-
-1. 서버 중지 (1️⃣ 참고)
-
-   ```bash
-   ps aux | grep security-demo
-   kill <PID>
-   ```
-2. 서버 시작 (3️⃣ 참고)
-
-   ```bash
-   nohup java -jar build/libs/security-demo-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
-   ```
-
----
-
-## ✨ 팁
-
-* **Alias 활용**
-  매번 PID 찾기 번거로우면, `~/.bashrc` 등에 다음 Alias를 추가하세요:
+* **Alias 활용** (`~/.bashrc`):
 
   ```bash
   alias stopapp="ps aux | grep security-demo | awk '{print \$2}' | xargs kill"
   ```
+* **systemd 서비스 등록**:
 
-  이후 `stopapp` 명령만으로 서버를 중지할 수 있습니다.
+  ```ini
+  [Unit]
+  Description=Security Demo Spring Boot App
 
-* **systemd 서비스 등록**
-  장기 운영 시 `systemd`에 등록하면:
+  [Service]
+  ExecStart=/usr/bin/java -jar /home/ubuntu/study-spring-security/build/libs/security-demo-0.0.1-SNAPSHOT.jar
+  SuccessExitStatus=143
+  Restart=on-failure
+  User=ubuntu
 
-  ```bash
-  sudo systemctl start  security-demo
-  sudo systemctl stop   security-demo
-  sudo systemctl restart security-demo
+  [Install]
+  WantedBy=multi-user.target
   ```
 
-  처럼 간편하게 관리할 수 있습니다.
+  ```bash
+  sudo mv security-demo.service /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl start security-demo
+  sudo systemctl enable security-demo
+  ```
+
+---
+
+## 5️⃣ 개발 가이드
+
+* **Spring Security**: JWT 필터, AuthenticationEntryPoint, SecurityFilterChain
+* **Spring AI**: `spring-ai-starter-model-openai`, RAG(Retrieval-Augmented Generation) 패턴 적용
+* **챗봇 자동 응답**: OpenAI Chat API 호출, DB 또는 벡터 스토어(예: Elastic, Redis)에서 문서 검색 후 컨텍스트 제공
+* **테스트**: Swagger UI, Postman을 활용한 API 검증
+
+---
+
+> 문서가 최신이 아닐 경우, 이 `readme.md`를 업데이트해주세요.
