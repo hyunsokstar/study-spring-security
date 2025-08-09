@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/count").permitAll()
                         .requestMatchers("/api/ai/**").permitAll()
+                        .requestMatchers("/api/vector/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/favicon.ico").permitAll()
 
