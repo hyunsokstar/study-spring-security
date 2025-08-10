@@ -1,151 +1,104 @@
-# Security Demo 서버 관리 가이드
+# EC2 서버 업데이트 및 재시작 가이드
 
-이 문서는 `C:\study-spring-boot\security-demo\readme.md` 파일에 작성되는 서버 관리 및 개발 가이드입니다.
-
----
-
-## 프로젝트 개요
-
-* **기술 스펙**: Spring Boot 3.4.1, Spring Security, Spring AI (OpenAI), JWT 기반 인증
-* **목표**: Spring Security + Spring AI를 활용한 RAG 기반 챗봇 자동 응답 기능 구현
-
----
-
-## 1️⃣ 주요 엔드포인트
-
-* Swagger UI: 🔗 `http://43.200.234.52:8080/swagger-ui/index.html`
-* OpenAPI JSON: `http://43.200.234.52:8080/v3/api-docs`
-
----
-
-## 2️⃣ 빌드·Jar 파일 설정
-
-1. `build.gradle`에서 프로젝트 버전 및 Jar 파일 이름 지정
-
-   ```groovy
-   version = '0.0.1-SNAPSHOT'        // build/libs/security-demo-0.0.1-SNAPSHOT.jar 생성
-
-   tasks.named('bootJar') {
-       archiveBaseName.set('security-demo')   // (선택) base name 커스터마이징
-       archiveVersion.set(version)
-   }
-   ```
-2. `.env` 또는 `application.yml` 환경변수 설정
-
-   ```yaml
-   spring:
-     config:
-       import: "optional:file:.env"
-
-     datasource:
-       jdbc-url: ${DB_URL:jdbc:postgresql://localhost:5432/security_db}
-       username: ${DB_USERNAME:postgres}
-       password: ${DB_PASSWORD:postgres123}
-
-     jpa:
-       properties:
-         hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
-
-     ai:
-       openai:
-         api-key: ${OPENAI_API_KEY}
-         chat:
-           options:
-             model: gpt-4-1106-preview
-   ```
-
----
-
-## 3️⃣ 서버 관리 절차
-
-### A) 서버 중지
-
+## 1. 최신 코드 받기
 ```bash
-# 1) Java 프로세스 조회
+sudo git pull
+```
+
+## 2. 기존 PostgreSQL 컨테이너 정리
+```bash
+# 기존 컨테이너 중지 및 삭제
+docker stop security_demo_db
+docker rm security_demo_db
+
+# 기존 볼륨 삭제 (데이터 초기화)
+docker volume rm study-spring-security_pgdata
+```
+
+## 3. 새 docker-compose.yml 생성
+```bash
+cat > docker-compose.yml << 'EOF'
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: security_demo_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: security_db
+      POSTGRES_USER: pilot
+      POSTGRES_PASSWORD: pilot1234
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+
+networks:
+  backend:
+EOF
+```
+
+## 4. 새 PostgreSQL 컨테이너 실행
+```bash
+docker-compose up -d
+```
+
+## 5. 컨테이너 실행 확인
+```bash
+docker ps
+docker logs security_demo_db
+```
+
+## 6. 기존 Spring Boot 앱 종료
+```bash
+# 실행 중인 Java 프로세스 확인
 ps aux | grep java
 
-# 2) 원하는 PID로 종료
-kill <PID>
-# (강제) kill -9 <PID>
+# 포트 8080 사용 중인 프로세스 확인
+lsof -i :8080
+
+# 기존 앱 종료
+sudo fuser -k 8080/tcp
 ```
 
-### B) 빌드
-
+## 7. 새 코드 빌드
 ```bash
-./gradlew clean bootJar
-# → build/libs/security-demo-0.0.1-SNAPSHOT.jar 생성
+./gradlew build
 ```
 
-### C) 서버 시작
-
+## 8. nohup으로 백그라운드 실행
 ```bash
 nohup java -jar build/libs/security-demo-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
 ```
 
-* 마지막 줄에 뜨는 PID 확인
-
-### D) 상태 확인
-
+## 9. 실행 확인
 ```bash
 # 프로세스 확인
-ps aux | grep security-demo
+ps aux | grep java
 
-# 로그 실시간 모니터링
+# 포트 확인
+lsof -i :8080
+
+# 로그 확인
 tail -f app.log
+
+# 로그 실시간 모니터링 중단: Ctrl + C
 ```
 
-### E) 재시작
-
+## 10. 데이터베이스 초기화 (필요시)
 ```bash
-# 서버 중지 (A 참고)
-ps aux | grep security-demo
-kill <PID>
+# backup.sql이 있다면
+docker exec -i security_demo_db psql -U pilot -d security_db < backup.sql
 
-# 서버 시작 (C 참고)
-nohup java -jar build/libs/security-demo-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
+# 또는 init.sql이 있다면
+docker exec -i security_demo_db psql -U pilot -d security_db < init.sql
 ```
 
----
-
-## 4️⃣ 기타 팁
-
-* **Alias 활용** (`~/.bashrc`):
-
-  ```bash
-  alias stopapp="ps aux | grep security-demo | awk '{print \$2}' | xargs kill"
-  ```
-* **systemd 서비스 등록**:
-
-  ```ini
-  [Unit]
-  Description=Security Demo Spring Boot App
-
-  [Service]
-  ExecStart=/usr/bin/java -jar /home/ubuntu/study-spring-security/build/libs/security-demo-0.0.1-SNAPSHOT.jar
-  SuccessExitStatus=143
-  Restart=on-failure
-  User=ubuntu
-
-  [Install]
-  WantedBy=multi-user.target
-  ```
-
-  ```bash
-  sudo mv security-demo.service /etc/systemd/system/
-  sudo systemctl daemon-reload
-  sudo systemctl start security-demo
-  sudo systemctl enable security-demo
-  ```
-
----
-
-## 5️⃣ 개발 가이드
-
-* **Spring Security**: JWT 필터, AuthenticationEntryPoint, SecurityFilterChain
-* **Spring AI**: `spring-ai-starter-model-openai`, RAG(Retrieval-Augmented Generation) 패턴 적용
-* **챗봇 자동 응답**: OpenAI Chat API 호출, DB 또는 벡터 스토어(예: Elastic, Redis)에서 문서 검색 후 컨텍스트 제공
-* **테스트**: Swagger UI, Postman을 활용한 API 검증
-
----
-
-> 문서가 최신이 아닐 경우, 이 `readme.md`를 업데이트해주세요.
+## 참고사항
+- nohup으로 실행하면 SSH 연결이 끊어져도 서버가 계속 실행됩니다
+- 로그는 `app.log` 파일에 저장됩니다
+- PostgreSQL은 pgvector 확장이 포함된 버전으로 업그레이드됩니다
+- 데이터베이스명: `security_db`, 사용자: `pilot`, 비밀번호: `pilot1234`
