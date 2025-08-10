@@ -1,8 +1,8 @@
-package com.example.security.security_demo.ai.controller;
+package com.example.security.security_demo.ai.chatbot.controller;
 
-import com.example.security.security_demo.ai.dto.ChatRequest;
-import com.example.security.security_demo.ai.dto.ChatResponse;
-import com.example.security.security_demo.ai.service.ChatGptService;
+import com.example.security.security_demo.ai.chatbot.dto.ChatRequest;
+import com.example.security.security_demo.ai.chatbot.dto.ChatResponse;
+import com.example.security.security_demo.ai.chatbot.service.ChatGptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +42,35 @@ public class ChatGptController {
         return ResponseEntity.ok(response);
     }
 
+    // 🔥 벡터 검색 기반 일반 채팅 (새로 추가!)
+    @PostMapping("/chat-vector")
+    public ResponseEntity<ChatResponse> chatWithVector(
+            @RequestBody ChatRequest request,
+            @RequestParam(defaultValue = "5") int vectorCount) {
+        ChatResponse response = chatGptService.chatWithVector(request.getMessage(), vectorCount);
+        return ResponseEntity.ok(response);
+    }
+
+    // 🔥 기존 스트리밍 엔드포인트를 벡터 검색 기반으로 변경! (프론트엔드에서 사용하는 엔드포인트)
+    @PostMapping(value = "/stream/{streamId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamChatWithId(
+            @PathVariable String streamId,
+            @RequestBody ChatRequest request,
+            @RequestParam(defaultValue = "5") int vectorCount) {
+
+        // 🔥 이제 기본적으로 벡터 검색 기반으로 동작
+        return chatGptService.streamChatWithVector(request.getMessage(), streamId, vectorCount);
+    }
+
+    // 🔥 일반 스트리밍 (벡터 검색 없음) - 필요한 경우 사용
+    @PostMapping(value = "/stream/simple/{streamId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamChatSimple(
+            @PathVariable String streamId,
+            @RequestBody ChatRequest request) {
+
+        return chatGptService.streamChatWithId(request.getMessage(), streamId);
+    }
+
     // 🔥 스트리밍 채팅 (GET 방식) - 테스트용
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChat(@RequestParam String message) {
@@ -49,22 +78,13 @@ public class ChatGptController {
                 .map(chunk -> "data: " + chunk + "\n\n"); // SSE 형식
     }
 
-    // 🔥 스트리밍 채팅 (POST 방식) - 실제 사용 (기존 방식)
+    // 🔥 스트리밍 채팅 (POST 방식) - 벡터 검색 없는 기본 스트리밍
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChatPost(@RequestBody ChatRequest request) {
         return chatGptService.streamChat(request.getMessage());
-        // Spring WebFlux가 자동으로 SSE 형식으로 변환
     }
 
-    // 🔥 취소 가능한 스트리밍 채팅 (새로 추가)
-    @PostMapping(value = "/stream/{streamId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamChatWithId(
-            @PathVariable String streamId,
-            @RequestBody ChatRequest request) {
-        return chatGptService.streamChatWithId(request.getMessage(), streamId);
-    }
-
-    // 🛑 스트리밍 취소 (새로 추가)
+    // 🛑 스트리밍 취소
     @DeleteMapping("/stream/{streamId}")
     public ResponseEntity<Map<String, Object>> cancelStream(@PathVariable String streamId) {
         boolean cancelled = chatGptService.cancelStream(streamId);
@@ -78,7 +98,7 @@ public class ChatGptController {
         return ResponseEntity.ok(response);
     }
 
-    // 📊 활성 스트림 목록 조회 (디버깅용) (새로 추가)
+    // 📊 활성 스트림 목록 조회 (디버깅용)
     @GetMapping("/streams/active")
     public ResponseEntity<Map<String, Object>> getActiveStreams() {
         Set<String> activeStreams = chatGptService.getActiveStreams();
@@ -111,6 +131,22 @@ public class ChatGptController {
     @PostMapping("/review-code")
     public ResponseEntity<ChatResponse> reviewCode(@RequestBody String code) {
         ChatResponse response = chatGptService.reviewCode(code);
+        return ResponseEntity.ok(response);
+    }
+
+    // 📝 요약 기능 (새로 추가)
+    @PostMapping("/summarize")
+    public ResponseEntity<ChatResponse> summarize(@RequestBody ChatRequest request) {
+        ChatResponse response = chatGptService.summarize(request.getMessage());
+        return ResponseEntity.ok(response);
+    }
+
+    // 🎨 창작 도우미 (새로 추가)
+    @PostMapping("/creative")
+    public ResponseEntity<ChatResponse> generateCreativeContent(
+            @RequestParam String topic,
+            @RequestParam String contentType) {
+        ChatResponse response = chatGptService.generateCreativeContent(topic, contentType);
         return ResponseEntity.ok(response);
     }
 }

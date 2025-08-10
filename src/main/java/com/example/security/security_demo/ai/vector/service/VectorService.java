@@ -1,6 +1,6 @@
-package com.example.security.security_demo.vector.service;
+package com.example.security.security_demo.ai.vector.service;
 
-import com.example.security.security_demo.vector.dto.SearchResponse;
+import com.example.security.security_demo.ai.vector.dto.SearchResponse;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -143,13 +143,7 @@ public class VectorService {
     }
 
     /**
-     * Document를 ProjectInfo로 변환 (방어 코드 강화)
-     */
-    /**
-     * Document를 ProjectInfo로 변환 (원본 데이터 그대로 반환)
-     */
-    /**
-     * Document를 ProjectInfo로 변환 (id 포함, additionalInfo 제거)
+     * Document를 ProjectInfo로 변환 (최종 버전: id 포함, additionalInfo 제거)
      */
     private SearchResponse.ProjectInfo convertToProjectInfo(Document doc) {
         Map<String, Object> meta = doc.getMetadata();
@@ -160,17 +154,18 @@ public class VectorService {
         }
 
         return SearchResponse.ProjectInfo.builder()
-                .id(safeGetString(meta, "id", null))  // id 추가
+                .id(safeGetString(meta, "id", null))  // 🔥 id 필드 추가
                 .description(doc.getContent() != null ? doc.getContent() : "")
                 .title(safeGetString(meta, "title", "제목없음"))
                 .githubUrl(safeGetString(meta, "githubUrl", null))
                 .author(safeGetString(meta, "author", null))
                 .version(safeGetString(meta, "version", null))
-                .tags(extractStringList(meta.get("tags")))
-                .stack(extractStringList(meta.get("stack")))
-                // additionalInfo 제거
+                .tags(extractStringList(meta.get("tags")))        // 🔥 실제 데이터 추출
+                .stack(extractStringList(meta.get("stack")))      // 🔥 실제 데이터 추출
+                // 🔥 additionalInfo 완전 제거
                 .build();
     }
+
     /**
      * 안전하게 String 값 추출
      */
@@ -184,15 +179,6 @@ public class VectorService {
         } catch (Exception e) {
             log.warn("Failed to extract string for key: {}, error: {}", key, e.getMessage());
             return defaultValue;
-        }
-    }
-
-    /**
-     * null이 아닌 값만 Map에 추가
-     */
-    private void safeAddToMap(Map<String, Object> map, String key, Object value) {
-        if (value != null) {
-            map.put(key, value);
         }
     }
 
@@ -219,48 +205,7 @@ public class VectorService {
         return new ArrayList<>();
     }
 
-    /**
-     * 스택 정보를 안전하게 추출
-     */
-    private List<String> extractStackList(Object stackObj) {
-        if (stackObj == null) {
-            return new ArrayList<>();
-        }
-
-        List<String> stackList = new ArrayList<>();
-
-        try {
-            // Case 1: stack이 Map 형태 (frontend, backend, devops 구분)
-            if (stackObj instanceof Map<?, ?>) {
-                Map<?, ?> stackMap = (Map<?, ?>) stackObj;
-                for (Object value : stackMap.values()) {
-                    if (value instanceof List<?>) {
-                        List<?> list = (List<?>) value;
-                        list.stream()
-                                .filter(Objects::nonNull)
-                                .map(Object::toString)
-                                .forEach(stackList::add);
-                    } else if (value != null) {
-                        stackList.add(value.toString());
-                    }
-                }
-            }
-            // Case 2: stack이 List 형태
-            else if (stackObj instanceof List<?>) {
-                stackList.addAll(extractStringList(stackObj));
-            }
-            // Case 3: stack이 단일 문자열
-            else {
-                stackList.add(stackObj.toString());
-            }
-        } catch (Exception e) {
-            log.warn("Failed to extract stack list: {}", e.getMessage());
-        }
-
-        return stackList;
-    }
-
-    // ================ 삭제 기능 추가 ================
+    // ================ 삭제 기능 ================
 
     /**
      * 문서 ID로 삭제
@@ -299,13 +244,11 @@ public class VectorService {
      */
     @Transactional
     public int deleteByTitle(String title) {
-        // 제목으로 검색
         SearchRequest searchRequest = SearchRequest.query(title)
-                .withTopK(100);  // 최대 100개까지
+                .withTopK(100);
 
         List<Document> documents = vectorStore.similaritySearch(searchRequest);
 
-        // 제목이 정확히 일치하는 문서만 필터링
         List<String> idsToDelete = documents.stream()
                 .filter(doc -> {
                     String docTitle = (String) doc.getMetadata().get("title");
@@ -328,13 +271,11 @@ public class VectorService {
      */
     @Transactional
     public int deleteByDomain(String domain) {
-        // 모든 문서 검색 (도메인 필터링용)
         SearchRequest searchRequest = SearchRequest.query("")
-                .withTopK(1000);  // 최대 1000개
+                .withTopK(1000);
 
         List<Document> documents = vectorStore.similaritySearch(searchRequest);
 
-        // 도메인이 일치하는 문서 필터링
         List<String> idsToDelete = documents.stream()
                 .filter(doc -> {
                     String docDomain = (String) doc.getMetadata().get("domain");
@@ -355,7 +296,6 @@ public class VectorService {
 
     /**
      * 전체 벡터 데이터 삭제 (위험! 테스트용)
-     * 확인 코드: "DELETE_ALL_VECTORS"
      */
     @Transactional
     public boolean deleteAllVectors(String confirmCode) {
@@ -365,15 +305,13 @@ public class VectorService {
         }
 
         try {
-            // PostgreSQL 직접 쿼리 실행 (vector_store 테이블 비우기)
             if (jdbcTemplate != null) {
                 int deleted = jdbcTemplate.update("TRUNCATE TABLE vector_store");
                 log.warn("⚠️ ALL VECTOR DATA DELETED - TRUNCATE executed");
                 return true;
             } else {
-                // JdbcTemplate이 없으면 개별 삭제 시도
                 SearchRequest searchRequest = SearchRequest.query("")
-                        .withTopK(10000);  // 최대한 많이
+                        .withTopK(10000);
 
                 List<Document> allDocs = vectorStore.similaritySearch(searchRequest);
                 List<String> allIds = allDocs.stream()
@@ -400,7 +338,6 @@ public class VectorService {
         Map<String, Object> stats = new HashMap<>();
 
         try {
-            // 전체 문서 수 카운트
             if (jdbcTemplate != null) {
                 Integer count = jdbcTemplate.queryForObject(
                         "SELECT COUNT(*) FROM vector_store",
@@ -408,7 +345,6 @@ public class VectorService {
                 );
                 stats.put("totalDocuments", count);
 
-                // 도메인별 카운트
                 List<Map<String, Object>> domainCounts = jdbcTemplate.queryForList(
                         "SELECT metadata->>'domain' as domain, COUNT(*) as count " +
                                 "FROM vector_store " +

@@ -1,12 +1,11 @@
-package com.example.security.security_demo.vector.controller;
+package com.example.security.security_demo.ai.vector.controller;
 
-import com.example.security.security_demo.vector.dto.*;
-import com.example.security.security_demo.vector.service.VectorService;
+import com.example.security.security_demo.ai.vector.dto.*;
+import com.example.security.security_demo.ai.vector.service.VectorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

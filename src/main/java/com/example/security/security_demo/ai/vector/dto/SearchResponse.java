@@ -1,4 +1,4 @@
-package com.example.security.security_demo.vector.dto;
+package com.example.security.security_demo.ai.vector.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

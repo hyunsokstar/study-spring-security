@@ -1,4 +1,4 @@
-package com.example.security.security_demo.ai.dto;
+package com.example.security.security_demo.ai.chatbot.dto;
 
 import lombok.Data;
 
