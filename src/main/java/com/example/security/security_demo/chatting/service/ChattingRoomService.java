@@ -22,7 +22,7 @@ public class ChattingRoomService {
     @Transactional
     public ChattingRoomResponse createRoom(CreateChattingRoomRequest req) {
         ChattingRoom room = new ChattingRoom(req.getName());
-        ChattingRoom saved = roomRepository.save(room);
+        ChattingRoom saved = roomRepository.saveAndFlush(room); // flush 즉시
         return ChattingRoomResponse.of(saved.getId(), saved.getName(), saved.getCreatedAt(), 0L, null);
     }
 
