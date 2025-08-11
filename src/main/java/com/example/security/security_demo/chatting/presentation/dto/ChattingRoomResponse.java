@@ -1,4 +1,4 @@
-package com.example.security.security_demo.chatting.dto;
+package com.example.security.security_demo.chatting.presentation.dto;
 
 import lombok.Getter;
 
@@ -13,13 +13,7 @@ public class ChattingRoomResponse {
     private final Long messageCount;
     private final Instant lastMessageAt;
 
-    private ChattingRoomResponse(
-            UUID id,
-            String name,
-            Instant createdAt,
-            Long messageCount,
-            Instant lastMessageAt
-    ) {
+    private ChattingRoomResponse(UUID id, String name, Instant createdAt, Long messageCount, Instant lastMessageAt) {
         this.id = id;
         this.name = name;
         this.createdAt = createdAt;
@@ -27,13 +21,7 @@ public class ChattingRoomResponse {
         this.lastMessageAt = lastMessageAt;
     }
 
-    public static ChattingRoomResponse of(
-            UUID id,
-            String name,
-            Instant createdAt,
-            Long messageCount,
-            Instant lastMessageAt
-    ) {
+    public static ChattingRoomResponse of(UUID id, String name, Instant createdAt, Long messageCount, Instant lastMessageAt) {
         return new ChattingRoomResponse(id, name, createdAt, messageCount, lastMessageAt);
     }
 }

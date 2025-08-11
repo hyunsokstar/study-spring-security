@@ -1,42 +1,44 @@
 package com.example.security.security_demo.chatting.domain;
 
-import com.example.security.security_demo.user.domain.User;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Builder;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.Instant;
 import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "chatting_messages")
+@Table(name = "chatting_messages", indexes = {
+        @Index(name = "idx_chatting_messages_room_created_at", columnList = "room_id, created_at")
+})
 public class ChattingMessage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "room_id", nullable = false, foreignKey = @ForeignKey(name = "fk_message_room"))
     private ChattingRoom room;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id", nullable = false)
-    private User sender;
+    @Column(name = "sender", length = 100, nullable = false)
+    private String sender;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "content", length = 2000, nullable = false)
     private String content;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = Instant.now();
-    }
-
     @Builder
-    public ChattingMessage(ChattingRoom room, User sender, String content) {
+    private ChattingMessage(ChattingRoom room, String sender, String content) {
         this.room = room;
         this.sender = sender;
         this.content = content;
