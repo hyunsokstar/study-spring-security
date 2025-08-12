@@ -69,6 +69,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/vector/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/favicon.ico").permitAll()
+                        
+                        // 채팅방 목록 조회는 누구나 가능
+                        .requestMatchers(HttpMethod.GET, "/api/chatting/rooms").permitAll()
+                        // 채팅방 생성은 인증 필요 (기본적으로 인증 필요)
 
                         // 나머지 요청은 인증 필요
                         .anyRequest().authenticated()

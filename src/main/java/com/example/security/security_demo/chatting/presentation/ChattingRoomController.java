@@ -6,6 +6,8 @@ import com.example.security.security_demo.chatting.service.ChattingRoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +19,42 @@ public class ChattingRoomController {
     private final ChattingRoomService roomService;
 
     @PostMapping
-    public ResponseEntity<ChattingRoomResponse> createRoom(@Valid @RequestBody CreateChattingRoomRequest req) {
-        return ResponseEntity.ok(roomService.createRoom(req));
+    public ResponseEntity<?> createRoom(@Valid @RequestBody CreateChattingRoomRequest req) {
+        try {
+            // 현재 로그인한 사용자 정보 추출
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null || !authentication.isAuthenticated() || 
+                "anonymousUser".equals(authentication.getName())) {
+                return ResponseEntity.status(401)
+                    .body(new ErrorResponse("로그인이 필요합니다. 채팅방을 생성하려면 먼저 로그인해주세요."));
+            }
+            
+            String username = authentication.getName();
+            ChattingRoomResponse response = roomService.createRoom(req, username);
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404)
+                .body(new ErrorResponse("사용자를 찾을 수 없습니다: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(new ErrorResponse("채팅방 생성 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+    
+    // 에러 응답용 DTO
+    public static class ErrorResponse {
+        private final String message;
+        private final long timestamp;
+        
+        public ErrorResponse(String message) {
+            this.message = message;
+            this.timestamp = System.currentTimeMillis();
+        }
+        
+        public String getMessage() { return message; }
+        public long getTimestamp() { return timestamp; }
     }
 
     @GetMapping

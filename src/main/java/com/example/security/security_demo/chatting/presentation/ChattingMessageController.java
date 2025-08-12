@@ -2,15 +2,18 @@ package com.example.security.security_demo.chatting.presentation;
 
 import com.example.security.security_demo.chatting.presentation.dto.ChattingMessageResponse;
 import com.example.security.security_demo.chatting.presentation.dto.SendChattingMessageRequest;
-import com.example.security.security_demo.chatting.service.ChattingMessageService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+
+import com.example.security.security_demo.chatting.service.ChattingMessageService;
 
 @RestController
 @RequestMapping("/api/chatting/rooms/{roomId}/messages")

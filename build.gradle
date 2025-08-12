@@ -81,3 +81,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// Keep parameter names for Spring and tools relying on reflection
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-parameters']
+}

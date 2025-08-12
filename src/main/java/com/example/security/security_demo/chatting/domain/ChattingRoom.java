@@ -1,5 +1,6 @@
 package com.example.security.security_demo.chatting.domain;
 
+import com.example.security.security_demo.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -24,6 +25,10 @@ public class ChattingRoom {
     @Column(length = 100, nullable = false)
     private String name;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id", foreignKey = @ForeignKey(name = "fk_chatting_room_creator"))
+    private User creator;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -40,6 +45,13 @@ public class ChattingRoom {
         this.name = name;
         this.isActive = true;
         this.roomType = RoomType.PUBLIC; // 안전하게 기본값 지정
+    }
+
+    public ChattingRoom(String name, User creator) {
+        this.name = name;
+        this.creator = creator;
+        this.isActive = true;
+        this.roomType = RoomType.PUBLIC;
     }
 
     public enum RoomType {
