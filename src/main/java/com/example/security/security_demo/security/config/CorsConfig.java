@@ -17,7 +17,7 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 🌐 허용할 Origin 설정 (Tauri + 개발 서버)
+        // 🌐 허용할 Origin 설정 (Tauri + 개발 서버 + 배포 환경)
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:1420",       // ⭐ Vite 개발 서버 (현재 에러 origin)
                 "http://localhost:3000",       // React 개발 서버
@@ -25,7 +25,12 @@ public class CorsConfig {
                 "http://tauri.localhost",      // Tauri 앱
                 "https://tauri.localhost",
                 "tauri://localhost",
-                "tauri://*"
+                "tauri://*",
+                // 배포 환경 IP 주소들
+                "http://3.36.184.159:3000",    // 프론트엔드 배포 서버
+                "http://43.200.234.52:8080",   // 백엔드 배포 서버
+                "https://3.36.184.159:3000",   // HTTPS 프론트엔드
+                "https://43.200.234.52:8080"   // HTTPS 백엔드
         ));
 
         // 📝 허용할 HTTP 메서드
