@@ -24,6 +24,8 @@ public class CorsConfig {
                 "http://localhost:5173",       // Vite 기본 포트
                 "http://tauri.localhost",      // Tauri 앱
                 "https://tauri.localhost",
+                "https://boram-pilot1.cloud/",
+"https://www.boram-pilot1.cloud/",
                 "tauri://localhost",
                 "tauri://*",
                 // 배포 환경 IP 주소들
